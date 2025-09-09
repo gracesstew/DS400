@@ -1,0 +1,390 @@
+---
+title: "Week 3, Lecture 1, Chapter 2"
+format: html
+editor: visual
+---
+
+```{r, message=FALSE}
+library(bayesrules)
+library(tidyverse)
+library(janitor)
+library(skimr)
+```
+
+#### Import data with bayesrules package
+
+```{r}
+data(fake_news)
+```
+
+#### Bring up dataset documentation
+
+```{r}
+?fake_news
+```
+
+#### Your Turn
+
+💻 📈 Take 10 minutes to do some some exploratory data analysis below and we will chat about best practices. Keep in mind two variables that we will focus on, type and title_has_exc
+
+```{r}
+ggplot(fake_news, aes(x = title_has_excl, fill = type)) +
+  geom_bar()
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+unique(fake_news$type)
+unique(fake_news$title_has_excl)
+
+```
+
+```{r}
+
+fake_news %>% 
+  group_by(title_has_excl, type) %>% 
+  count()
+
+```
+
+```{r}
+ggplot(data = fake_news, aes(x = type, fill = title_has_excl)) +
+  geom_bar()
+```
+
+### The Whole Game
+
+![](images/clipboard-2218401115.png)
+
+A \<- Has exclamation point
+
+-   Ac \<- Does not have exclamation point
+
+B \<- Article is fake
+
+-   Bc \<- Article is real
+
+![](images/clipboard-3013301639.png){width="534"}
+
+Our fake news analysis boils down to the study of two **variables**: an article’s fake vs real status and its use of exclamation points. These features can *vary* from article to article. Some are fake, some aren’t. Some use exclamation points, some don’t. We can represent the *randomness* in these variables using **probability models**. In this section we will build a **prior probability model** for our prior understanding of whether the most recent article is fake; a model for interpreting the exclamation point **data**; and, eventually, a **posterior probability model** which summarizes the posterior plausibility that the article is fake.
+
+### Prior Probability Model
+
+Percent of articles fake vs real
+
+P(B)
+
+```{r}
+fake_news %>% 
+  tabyl(type) %>% 
+  adorn_totals("row")
+
+```
+
+P(B) = 0.40
+
+-   The prior probability (an [unconditional probability](https://www.bayesrulesbook.com/chapter-2#building-a-bayesian-model-for-events:~:text=two%20events.%20The-,unconditional%20probability,-of)) that the article is fake is 0.4
+
+```{r}
+prior_probability_article_fake <- 0.4
+```
+
+P(Bc) = 0.60
+
+-   The prior probability (an unconditional probability) that the article is real is 0.6
+
+P(A)
+
+```{r}
+fake_news %>% 
+  tabyl(title_has_excl) %>% 
+  adorn_totals("row")
+```
+
+P(A) = 0.12
+
+-   The prior probability (an [unconditional probability](https://www.bayesrulesbook.com/chapter-2#building-a-bayesian-model-for-events:~:text=two%20events.%20The-,unconditional%20probability,-of)) that the article has an exclamation point is 0.12
+
+```{r}
+prior_probability_has_exc <- 0.12
+```
+
+P(Ac) = 0.88
+
+-   The prior probability (an unconditional probability) that the article does not have an exclamation point is 0.88
+
+So far we have this
+
+$$
+P(B \mid A) = \frac{0.4 L(B \mid A)}{0.12} = \frac{0.4 \cdot 0.2667}{0.12} = 0.889.
+$$
+
+#### Likelihood
+
+-   The likelihood L(B∣A) is defined as P(A∣B):
+
+    > *If the article were fake, how likely is it to have an exclamation point?*
+    >
+    > *The probability the article uses an exclamation point given that it is fake*
+    >
+    > -   What percentage of fake articles use an exclamation point?
+
+```{r}
+fake_news %>% 
+  tabyl(title_has_excl, type) %>% 
+  adorn_percentages("col") 
+```
+
+L(B\|A) = 0.267
+
+```{r}
+likelihood_article_fake_has_exc <- 0.27
+```
+
+L(Bc\|A) = 0.022
+
+Now we have enough info for the posterior probability model
+
+$$
+P(B \mid A) = \frac{0.4 \cdot 0.2667  }{0.12} = \frac{0.4 \cdot 0.2667}{0.12} = 0.889.
+$$
+
+```{r}
+(prior_probability_article_fake * likelihood_article_fake_has_exc) / prior_probability_has_exc
+```
+
+We started with a prior understanding that there’s only a 40% chance that the incoming article would be fake. Yet upon observing the use of an exclamation point in the title *“The president has a funny secret!”*, a feature that’s more common to fake news, our posterior understanding evolved quite a bit – the chance that the article is fake jumped to 88.9%.
+
+Another way to think about it:
+
+P(B\|A)
+
+```{r}
+fake_news %>% 
+  tabyl(title_has_excl, type) %>% 
+  adorn_percentages("row") 
+```
+
+### Challenge
+
+Come up with your own P(B\|A) and share with the class
+
+Let's choose one, generate synthetic data, and model
+
+```{r}
+# ---- Setup & assumptions you can tweak ----
+set.seed(123)
+
+n <- 5000                     # number of people
+p_vac <- 0.25                 # P(Vacation = Yes)
+p_beach_given_vac <- 0.75     # P(Beach = Yes | Vacation = Yes)
+p_beach_given_not <- 0.15     # P(Beach = Yes | Vacation = No)
+
+# ---- Simulate vacation status ----
+vacation_yes <- rbinom(n, size = 1, prob = p_vac) == 1
+
+# ---- Simulate beach_today conditional on vacation ----
+beach_yes <- ifelse(
+  vacation_yes,
+  rbinom(n, size = 1, prob = p_beach_given_vac) == 1,
+  rbinom(n, size = 1, prob = p_beach_given_not) == 1
+)
+
+# ---- Build the dataset (exactly two columns) ----
+beach_data <- data.frame(
+  beach_today = ifelse(beach_yes, "Yes", "No"),
+  vacation    = ifelse(vacation_yes, "Yes", "No"),
+  stringsAsFactors = FALSE
+)
+
+```
+
+```{r}
+ggplot(beach_data, aes(x = beach_today, fill = vacation)) +
+  geom_bar()
+
+```
+
+```{r}
+beach_data%>%
+  tabyl(beach_today)%>%
+  adorn_totals("row")
+```
+
+```{r}
+beach_data%>%
+  tabyl(vacation)%>%
+  adorn_totals("row")
+```
+
+```{r}
+probability_on_vacation <-0.24
+```
+
+```{r}
+probability_went_to_beach <-0.3
+```
+
+```{r}
+beach_data%>%
+  tabyl(beach_today, vacation) %>%
+  adorn_percentages("row")
+```
+
+P(B) - this person went to the beach
+
+P(A) - this person is on vacation
+
+P(B\|A) - what is the probability this person went to the beach given that they are on vacation
+
+L(B\|A) = P(A\|B) - the probability that this person is on vacation given that they went to the beach
+
+### Video
+
+<https://www.youtube.com/watch?v=8vHKCrNGPhY>
+
+### Challenge
+
+Let’s put Bayes’ Rule into action in another example. Our word choices can reflect where we live. For example, suppose you’re watching an interview of somebody that lives in the United States. Without knowing anything about this person, U.S. Census figures provide prior information about the region in which they might live: the Midwest (M), Northeast (N), South (S), or West (W).
+
+```{r}
+data(pop_vs_soda)
+```
+
+Exploratory Analysis
+
+```{r}
+head(pop_vs_soda)
+dim(pop_vs_soda)
+str(pop_vs_soda)
+summary(pop_vs_soda)
+table(pop_vs_soda)
+```
+
+```{r}
+img1 <- ggplot(pop_vs_soda, aes(x=region, fill = word_for_cola)) + geom_bar()
+
+library(plotly)
+
+ggplotly(img1)
+```
+
+1\) Build a prior probability model (an unconditional probability model) with probabilities for where the person is from
+
+-   Letting S denote the person is from the south
+
+    -   P(S)
+
+-   Letting N denote the person is from the northeast
+
+    -   P(N)
+
+-   Letting W denote the person is from the west
+
+    -   P(W)
+
+-   Letting M denote the person is from the midwest
+
+    -   P(M)
+
+2\) But then, you see the person point to a fizzy cola drink and say “please pass my pop.” Though the country is united in its love of fizzy drinks, it’s divided in what they’re called, with common regional terms including “pop,” “soda,” and “coke.” This **data**, i.e., the person’s use of “pop,” provides further information about where they might live.
+
+-   -Determine regional likelihoods that a person uses the word “pop,”
+
+    -   Letting A denote the event that a person uses the word “pop,”
+
+3\) Build a posterior probability model determining the probability that the person is from the south based on using the word "pop": P(S\|A)\
+
+Pop vs Soda - In Class
+
+```{r}
+# data("pop_vs_soda")
+```
+
+Exploratory Analysis
+
+```{r}
+# img1 <- ggplot(pop_vs_soda, aes(x=region, fill = word_for_cola)) + geom_bar()
+
+# library(plotly)
+
+# ggplotly(img1)
+```
+
+Prior Probability
+
+P(B) prior probability the person is from the south
+
+```{r}
+pop_vs_soda %>%
+  tabyl(region) 
+```
+
+2\) Regional Likelihoods
+
+```{r}
+priors <- c(
+  south = 0.39,
+  midwest = 0.21,
+  northeast = 0.17,
+  west = 0.24
+)
+
+priors
+```
+
+```{r}
+prior_probability_from_south <- 0.39
+```
+
+```{r}
+#pop_vs_soda %>%
+  #tabyl(region, pop) %>% 
+  #adorn_percentages("row") %>% 
+  #filter(pop == "TRUE") %>% 
+  #select(-pop) %>% 
+  #unlist()
+
+likelihoods <- pop_vs_soda %>% 
+  tabyl(pop, region) %>% 
+  adorn_percentages("col") %>% 
+  filter(pop == "TRUE") %>% 
+  select(-pop) %>% 
+  unlist()
+
+likelihoods
+```
+
+```{r}
+probability_says_pop_south <- 0.079
+```
+
+3\) Marginal prior probability that a person uses the word pop
+
+```{r}
+prior_probability_says_pop <- sum(priors*likelihoods)
+
+prior_probability_says_pop
+```
+
+4\) Finding our posterior probability P(S\|A)
+
+```{r}
+(prior_probability_from_south *
+probability_says_pop_south) /
+prior_probability_says_pop
+```
+
+5\) extra:
+
+```{r}
+library(maps)
+library(dplyr)
+```
