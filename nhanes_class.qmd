@@ -86,18 +86,62 @@ df <- df %>%
 2.  Do some exploratory data analysis
 
 ```{r}
-
+ggplot(df, aes(x = DRD370BQ, fill = DIQ010)) +
+  geom_bar()+
+  labs(title="Tuna Consumption Frequency by Diabetes Status",
+       x="Tuna Consumption (30 Days)",
+       y="Frequency",
+       fill="Has diabetes?"
+       )
 ```
 
 2.  Determine the prior probability that someone has diabetes (DIQ010)
-    -   P(B)
-3.  Determine the prior probability that someone eats tuna (DRD370B)
-    -   P(A)
-4.  Determine the likelihood of eating tuna and having diabetes
-    -   L(B\|A) = P(A\|B)
-5.  Determine posterior probability via bayes theorem
-    -   P(B\|A)
-6.  What other questions can we ask of this data?
+
+-   P(B)
+
+```{r}
+df %>% 
+  tabyl(DIQ010)
+
+prior_prob_has_diabetes <- 0.13
+```
+
+2.  Determine the prior probability that someone eats tuna (DRD370B)
+
+P(A)
+
+```{r}
+df %>% 
+  tabyl(DRD370B)
+
+prior_prob_eats_tuna <- 0.36
+```
+
+2.  Determine the likelihood of eating tuna and having diabetes
+
+L(B\|A) = P(A\|B)
+
+```{r}
+df %>% 
+  tabyl(DRD370B, DIQ010) %>%
+  adorn_percentages("col")
+
+likelihood_tuna_diabetes <- 0.36
+```
+
+2.  Determine posterior probability via bayes theorem
+
+P(B\|A)
+
+```{r}
+(likelihood_tuna_diabetes*prior_prob_has_diabetes)/(prior_prob_eats_tuna)
+
+posterior_prob <- 0.13
+```
+
+2.  What other questions can we ask of this data?
+    -   What is the posterior probability that someone has diabetes given elevated blood mercury (`LBXIHG`) levels?
+    -   Is the probability of tuna consumption different between males and females?
 
 #### Bayes Theorem
 
@@ -114,3 +158,39 @@ A \<- Consumes Ahi
 ### Challenge
 
 Determine the posterior probability that someone has diabetes given they are over the age of 40. Age is in the demographics dataframe, you will have to join it with the tiid data.
+
+```{r}
+age <- select(demographics, SEQN, RIDAGEYR) #subset demographics df
+
+df_age <- tiid %>% # joining w/ tiid
+  left_join(age, by = "SEQN") %>%
+  filter(!is.na(DIQ010), !is.na(RIDAGEYR)) %>%
+  mutate(
+    DIQ010 = ifelse(DIQ010 == 1, "Has Diabetes", "No Diabetes"),
+    AgeGroup = ifelse(RIDAGEYR > 40, "Over 40", "40 and Under")
+  )
+```
+
+```{r}
+df_age %>% #calc prior probability of having diabetes
+  tabyl(DIQ010)
+
+prior_prob_has_diabetes2 <- 0.1 
+
+df_age %>% #calc prior probability of being over 40
+  tabyl(AgeGroup)
+
+prior_prob_over_40 <- 0.43
+
+df_age %>% #calc posterior probability of being 40+ and having diabetes
+  tabyl(AgeGroup, DIQ010) %>%
+  adorn_percentages("col")
+
+likelihood_40_diabetes <- 0.94
+```
+
+```{r}
+(likelihood_40_diabetes*prior_prob_has_diabetes)/(prior_prob_over_40)
+
+chall_posterior_prob <- 0.28
+```
