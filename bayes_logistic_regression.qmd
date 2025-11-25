@@ -145,7 +145,7 @@ Plans change. Hotel room bookings get canceled. In the next exercises, you’ll 
 Your analysis will incorporate the following variables on hotel bookings:
 
 | Variable | Notation | Meaning |
-|-------------------------|-------------------------|-----------------------|
+|----|----|----|
 | **is_canceled** | ( Y ) | whether or not the booking was canceled |
 | **lead_time** | ( X_1 ) | number of days between the booking and scheduled arrival |
 | **previous_cancellations** | ( X_2 ) | number of previous times the guest has canceled a booking |
